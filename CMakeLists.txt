@@ -8,9 +8,17 @@ option(BUILD_PYTHON_BINDINGS "Build python bindings" OFF)
 
 set(CMAKE_BUILD_TYPE "Release")
 
-find_package(PCL REQUIRED)
-find_package(Eigen3 REQUIRED)
-add_definitions(${PCL_DEFINITIONS})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib/$<CONFIG>)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib/$<CONFIG>)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+set(EXTERN_DOWNLOAD_DIR "${PROJECT_SOURCE_DIR}/downloads")
+add_subdirectory(extern)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L/home/liupeter/miniconda3/envs/gsicpslam/lib")
+
+#find_package(PCL REQUIRED)
+#find_package(Eigen3 REQUIRED)
+#add_definitions(${PCL_DEFINITIONS})
 
 if(DEFINED ENV{ROS_VERSION})
   set(ROS_VERSION $ENV{ROS_VERSION})
@@ -59,7 +67,8 @@ add_library(fast_gicp SHARED
   src/fast_gicp/gicp/fast_vgicp.cpp
 )
 target_link_libraries(fast_gicp
-  ${PCL_LIBRARIES}
+  ExternPCL
+  ExternEigen
 )
 if (OPENMP_FOUND)
     if (TARGET OpenMP::OpenMP_CXX)
@@ -68,8 +77,6 @@ if (OPENMP_FOUND)
 endif ()
 target_include_directories(fast_gicp PUBLIC
   include
-  ${PCL_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIR}
 )
 
 ### APPS ###
@@ -77,16 +84,18 @@ if(BUILD_apps)
   add_executable(gicp_align src/align.cpp)
   add_dependencies(gicp_align fast_gicp)
   target_link_libraries(gicp_align
-    ${PCL_LIBRARIES}
+    ExternPCL
+    ExternEigen
     fast_gicp
   )
 
-  add_executable(gicp_kitti src/kitti.cpp)
-  add_dependencies(gicp_kitti fast_gicp)
-  target_link_libraries(gicp_kitti
-    ${PCL_LIBRARIES}
-    fast_gicp
-  )
+#  add_executable(gicp_kitti src/kitti.cpp)
+#  add_dependencies(gicp_kitti fast_gicp)
+#  target_link_libraries(gicp_kitti
+#    ExternPCL
+#    ExternEigen
+#    fast_gicp
+#  )
 endif()
 
 ### Python bindings ###
@@ -97,10 +106,10 @@ if(BUILD_PYTHON_BINDINGS)
   )
   target_include_directories(pygicp PUBLIC
     include
-    ${PCL_INCLUDE_DIRS}
-    ${EIGEN3_INCLUDE_DIR}
   )
   target_link_libraries(pygicp PRIVATE
+    ExternPCL
+    ExternEigen
     fast_gicp
   )
 endif()
@@ -155,7 +164,7 @@ if(BUILD_test)
 
   add_executable(gicp_test src/test/gicp_test.cpp)
   add_dependencies(gicp_test fast_gicp)
-  target_link_libraries(gicp_test ${GTEST_LIBRARIES} ${PCL_LIBRARIES} fast_gicp)
+  target_link_libraries(gicp_test ${GTEST_LIBRARIES} ExternPCL ExternEigen fast_gicp)
   gtest_add_tests(TARGET gicp_test WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} EXTRA_ARGS "${CMAKE_SOURCE_DIR}/data")
 endif()
 

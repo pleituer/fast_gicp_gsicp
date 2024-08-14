@@ -1,3 +1,8 @@
+```
+conda install cmake
+conda install -c conda-forge boost flann qhull
+```
+
 
 * Ref: https://github.com/SMRT-AIST/fast_gicp
 

@@ -4,6 +4,8 @@ import sys
 import glob
 import subprocess
 
+import shutil
+
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 
@@ -48,7 +50,7 @@ class CMakeBuild(build_ext):
             "-DPYTHON_EXECUTABLE={}".format(sys.executable),
             "-DEXAMPLE_VERSION_INFO={}".format(self.distribution.get_version()),
             "-DCMAKE_BUILD_TYPE={}".format(cfg),  # not used on MSVC, but no harm,
-            # "-DBUILD_VGICP_CUDA=ON",
+            "-DBUILD_VGICP_CUDA=ON",
             "-DBUILD_PYTHON_BINDINGS=ON",
         ]
         build_args = []
@@ -85,12 +87,15 @@ class CMakeBuild(build_ext):
 
         # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
         # across all generators.
-        if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
-            # self.parallel is a Python 3 only way to set parallel jobs by hand
-            # using -j in the build_ext call, not supported by pip or PyPA-build.
-            if hasattr(self, "parallel") and self.parallel:
-                # CMake 3.12+ only.
-                build_args += ["-j{}".format(self.parallel)]
+        #if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
+        #    # self.parallel is a Python 3 only way to set parallel jobs by hand
+        #    # using -j in the build_ext call, not supported by pip or PyPA-build.
+        #    if hasattr(self, "parallel") and self.parallel:
+        #        # CMake 3.12+ only.
+        #        build_args += ["-j{}".format(self.parallel)]
+        
+        nproc = 8 #os.cpu_count()
+        build_args += ["--parallel", str(nproc)]
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -101,6 +106,14 @@ class CMakeBuild(build_ext):
         subprocess.check_call(
             ["cmake", "--build", "."] + build_args, cwd=self.build_temp
         )
+
+        source_dir = os.path.join(self.build_temp, 'lib', 'Release')
+        dest_dir = os.path.join('build', 'lib.linux-x86_64-cpython-39')
+        os.makedirs(dest_dir, exist_ok=True)
+        so_files = glob.glob(os.path.join(source_dir, '*.so'))
+        for so_file in so_files:
+            shutil.copy(so_file, dest_dir)
+            print(f"Copied {so_file} to {dest_dir}")
 
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
