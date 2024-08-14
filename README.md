@@ -3,6 +3,7 @@ conda install cmake
 conda install -c conda-forge boost flann qhull
 ```
 
+Note: clone the gs_icp_slam branch, not the main branch
 
 * Ref: https://github.com/SMRT-AIST/fast_gicp
 
