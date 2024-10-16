@@ -16,8 +16,13 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/filters/approximate_voxel_grid.h>
+#include <pcl/console/print.h>
 
 namespace py = pybind11;
+
+void setPCLVerbosityLevel(int level) {
+    pcl::console::setVerbosityLevel(static_cast<pcl::console::VERBOSITY_LEVEL>(level));
+}
 
 fast_gicp::NeighborSearchMethod search_method(const std::string& neighbor_search_method) {
   if(neighbor_search_method == "DIRECT1") {
@@ -147,6 +152,15 @@ using NDTCuda = fast_gicp::NDTCuda<pcl::PointXYZ, pcl::PointXYZ>;
 #endif
 
 PYBIND11_MODULE(pygicp, m) {
+  m.def("set_pcl_verbosity_level", &setPCLVerbosityLevel, "Set PCL verbosity level");
+
+  m.attr("L_ALWAYS") = pybind11::int_(0);
+  m.attr("L_ERROR") = pybind11::int_(1);
+  m.attr("L_WARN") = pybind11::int_(2);
+  m.attr("L_INFO") = pybind11::int_(3);
+  m.attr("L_DEBUG") = pybind11::int_(4);
+  m.attr("L_VERBOSE") = pybind11::int_(5);
+    
   m.def("downsample", &downsample, "downsample points");
 
   m.def("align_points", &align_points, "align two point sets",
