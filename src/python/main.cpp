@@ -18,6 +18,9 @@
 #include <pcl/filters/approximate_voxel_grid.h>
 #include <pcl/console/print.h>
 
+#include <pybind11/iostream.h>
+#include <stdio.h>
+
 namespace py = pybind11;
 
 void setPCLVerbosityLevel(int level) {

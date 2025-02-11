@@ -174,6 +174,7 @@ protected:
   std::shared_ptr<SearchMethodTarget> search_target_;
 
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> source_covs_;
+  std::vector<Eigen::Matrix3d, Eigen::aligned_allocator<Eigen::Matrix3d>> source_covs_sqrt_;
 //  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> source_rotationsq_;
 //  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> source_scales_;
   std::vector<float> source_rotationsq_;
@@ -183,6 +184,7 @@ protected:
   int source_num_trackable_points_;
     
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> target_covs_;
+  std::vector<Eigen::Matrix3d, Eigen::aligned_allocator<Eigen::Matrix3d>> target_covs_sqrt_;
 //  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> target_rotationsq_;
 //  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> target_scales_;
   std::vector<float> target_rotationsq_;

@@ -3,6 +3,8 @@
 
 #include <fast_gicp/so3/so3.hpp>
 
+#include <stdio.h>
+
 namespace fast_gicp {
 
 template <typename PointSource, typename PointTarget, typename SearchMethodSource, typename SearchMethodTarget>
@@ -253,22 +255,64 @@ void FastGICP<PointSource, PointTarget, SearchMethodSource, SearchMethodTarget>:
   std::vector<int> k_indices(1);
   std::vector<float> k_sq_dists(1);
 
+  source_covs_sqrt_.resize(source_covs_.size());
+  target_covs_sqrt_.resize(target_covs_.size());
+
+/*
+#pragma omp parallel for num_threads(num_threads_) schedule(guided, 8)
+  for (int i = 0; i < source_covs_.size(); i++) {
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es(source_covs_[i].block<3, 3>(0, 0));
+    source_covs_sqrt_[i] = es.operatorSqrt();
+  }
+
+#pragma omp parallel for num_threads(num_threads_) schedule(guided, 8)
+  for (int i = 0; i < target_covs_.size(); i++) {
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es(target_covs_[i].block<3, 3>(0, 0));
+    target_covs_sqrt_[i] = es.operatorSqrt();
+  }
+*/
+
 #pragma omp parallel for num_threads(num_threads_) firstprivate(k_indices, k_sq_dists) schedule(guided, 8)
   for (int i = 0; i < input_->size(); i++) {
     PointTarget pt;
-    
     pt.getVector4fMap() = trans_f * input_->at(i).getVector4fMap();
-    
-    // if (!pcl::isFinite(pt)){
-    //   // std::cout << trans_f.data() << std::endl;
-    //   // std::cout << pt.x << pt.y << pt.z << std::endl;
-    //   continue;
-    // }
-    
+
     search_target_->nearestKSearch(pt, 1, k_indices, k_sq_dists);
-    
+
+    /*
     sq_distances_[i] = k_sq_dists[0];
-    correspondences_[i] = k_sq_dists[0] < corr_dist_threshold_ * corr_dist_threshold_ ? k_indices[0] : -1;
+    correspondences_[i] = sq_distances_[i] < corr_dist_threshold_ * corr_dist_threshold_ ? k_indices[0] : -1;
+    */
+    
+    Eigen::Matrix3d sqrt_cov_A = source_covs_sqrt_[i];
+
+    float min_cost = std::numeric_limits<float>::max();
+    float min_l2_distance = std::numeric_limits<float>::max();
+    int best_index = -1;
+
+    for (int j = 0; j < k_indices.size(); j++) {
+      int target_index = k_indices[j];
+      Eigen::Matrix3d sqrt_cov_B = target_covs_sqrt_[target_index];
+
+      float l2_distance = k_sq_dists[j];
+      float frobenius_norm = (sqrt_cov_A - sqrt_cov_B).norm();
+
+      float cost = l2_distance + frobenius_norm;
+
+      if (cost < min_cost) {
+        min_cost = cost;
+        best_index = target_index;
+        min_l2_distance = l2_distance;
+      }
+    }
+
+    sq_distances_[i] = min_l2_distance;
+    // #pragma omp parallel 
+    // {
+    //   std::cout << min_cost << " " << corr_dist_threshold_ << std::endl;
+    // }
+    correspondences_[i] = min_cost < corr_dist_threshold_ * corr_dist_threshold_ ? best_index : -1;
+    
     if (correspondences_[i] < 0) {
       continue;
     }
@@ -280,12 +324,10 @@ void FastGICP<PointSource, PointTarget, SearchMethodSource, SearchMethodTarget>:
     Eigen::Matrix4d RCR = cov_B + trans.matrix() * cov_A * trans.matrix().transpose();
     RCR(3, 3) = 1.0;
 
-    if (RCR.determinant() == 0){
-      // std::cout << "mahalanobis value will be NaN" << std::endl;
+    if (RCR.determinant() == 0) {
       mahalanobis_[i] = RCR.completeOrthogonalDecomposition().pseudoInverse();
       mahalanobis_[i](3, 3) = 0.0f;
-    }
-    else{
+    } else {
       mahalanobis_[i] = RCR.inverse();
       mahalanobis_[i](3, 3) = 0.0f;
     }
@@ -347,7 +389,7 @@ double FastGICP<PointSource, PointTarget, SearchMethodSource, SearchMethodTarget
       (*b) += bs[i];
     }
   }
-
+  // std::cout << "sum_errors: " << sum_errors << std::endl;
   return sum_errors;
 }
 
